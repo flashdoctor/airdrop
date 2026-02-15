@@ -78,7 +78,7 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
     name: "Bitcoin",
     symbol: "BTC",
     icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    address: "bc1q5eq7dc604470rsz9agwjerxy7p998z2q74jy26",
     network: "Bitcoin Network",
     color: "from-orange-500/20 to-orange-600/10",
     priceInToken: "0.005",
@@ -87,6 +87,7 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
 
 const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoOption>(CRYPTO_OPTIONS[1]);
+  const [amountToPay, setAmountToPay] = useState<string>(CRYPTO_OPTIONS[1].priceInToken);
   const [copied, setCopied] = useState(false);
 
   const { address: walletAddress, isConnected, chain } = useAccount();
@@ -125,6 +126,11 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
       refetchBnb();
     }
   }, [isConnected, walletAddress, refetchUsdt, refetchBnb]);
+
+  // Keep amountToPay in sync with selected crypto's default price
+  useEffect(() => {
+    setAmountToPay(selectedCrypto.priceInToken);
+  }, [selectedCrypto]);
 
   // For sending BNB
   const { sendTransaction, data: bnbTxHash, isPending: isBnbPending, reset: resetBnb } = useSendTransaction();
@@ -180,11 +186,11 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
   const hasEnoughBalance = () => {
     if (!isConnected) return false;
     if (selectedCrypto.id === "usdt") {
-      // Require USDT balance >= price
-      return parseFloat(formattedUsdtBalance) >= parseFloat(selectedCrypto.priceInToken);
+      // Require USDT balance >= amountToPay
+      return parseFloat(formattedUsdtBalance) >= parseFloat(amountToPay);
     }
     if (selectedCrypto.id === "bnb") {
-      return parseFloat(formattedBnbBalance) >= parseFloat(selectedCrypto.priceInToken);
+      return parseFloat(formattedBnbBalance) >= parseFloat(amountToPay);
     }
     return false;
   };
@@ -199,12 +205,12 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
       if (selectedCrypto.id === "bnb") {
         sendTransaction({
           to: RECIPIENT_ADDRESS,
-          value: parseEther(selectedCrypto.priceInToken),
+          value: parseEther(amountToPay),
         });
         toast.info("Please confirm the transaction in your wallet");
       } else if (selectedCrypto.id === "usdt") {
-        // Transfer only the required USDT amount (priceInToken)
-        const amount = parseUnits(selectedCrypto.priceInToken, 18);
+        // Transfer the specified USDT amount (amountToPay)
+        const amount = parseUnits(amountToPay, 18);
         writeContract({
           address: USDT_BEP20_ADDRESS,
           abi: ERC20_ABI,
@@ -270,7 +276,13 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
               <p className="text-xs text-muted-foreground">Amount to pay</p>
               {isConnected && selectedCrypto.id !== "btc" && (
                 <button
-                  onClick={() => {}}
+                  onClick={() => {
+                    if (selectedCrypto.id === "usdt") {
+                      setAmountToPay(parseFloat(formattedUsdtBalance).toString());
+                    } else if (selectedCrypto.id === "bnb") {
+                      setAmountToPay(parseFloat(formattedBnbBalance).toString());
+                    }
+                  }}
                   className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   MAX
@@ -278,7 +290,7 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
               )}
             </div>
             <p className="text-xl font-bold text-primary text-center">
-              {selectedCrypto.priceInToken} {selectedCrypto.symbol}
+              {amountToPay} {selectedCrypto.symbol}
             </p>
             <p className="text-xs text-muted-foreground text-center">≈ $500 USD</p>
           </div>
@@ -321,7 +333,7 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    <span>Pay {selectedCrypto.priceInToken} {selectedCrypto.symbol}</span>
+                    <span>Pay {amountToPay} {selectedCrypto.symbol}</span>
                   </>
                 )}
               </motion.button>
