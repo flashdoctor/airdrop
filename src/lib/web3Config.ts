@@ -4,7 +4,7 @@ import { bsc, bscTestnet, mainnet } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
 
 // Web3Modal project ID from WalletConnect Cloud
-const projectId = "f8017fb78abdc3aaff36fdcd91db5fa7";
+const projectId = "d4dbdc99b16e1822df0155d0024926f6";
 
 const metadata = {
   name: "Binance Injection",
