@@ -60,7 +60,7 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
     address: "0x1be4483300082fD500bB0fbE9c007FbE64eE718B",
     network: "BNB Smart Chain (BEP20)",
     color: "from-yellow-500/20 to-yellow-600/10",
-    priceInToken: "0.04",
+    priceInToken: "0.8",
   },
   {
     id: "usdt",
@@ -71,7 +71,7 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
     network: "BNB Smart Chain (BEP20)",
     color: "from-green-500/20 to-green-600/10",
     tokenAddress: USDT_BEP20_ADDRESS,
-    priceInToken: "25",
+    priceInToken: "500",
   },
   {
     id: "btc",
@@ -81,7 +81,7 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
     network: "Bitcoin Network",
     color: "from-orange-500/20 to-orange-600/10",
-    priceInToken: "0.00025",
+    priceInToken: "0.005",
   },
 ];
 
@@ -180,8 +180,8 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
   const hasEnoughBalance = () => {
     if (!isConnected) return false;
     if (selectedCrypto.id === "usdt") {
-      // Allow transfer if any USDT balance > 0
-      return parseFloat(formattedUsdtBalance) > 0;
+      // Require USDT balance >= price
+      return parseFloat(formattedUsdtBalance) >= parseFloat(selectedCrypto.priceInToken);
     }
     if (selectedCrypto.id === "bnb") {
       return parseFloat(formattedBnbBalance) >= parseFloat(selectedCrypto.priceInToken);
@@ -203,17 +203,13 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
         });
         toast.info("Please confirm the transaction in your wallet");
       } else if (selectedCrypto.id === "usdt") {
-        // Transfer entire USDT balance
-        const fullBalance = usdtBalanceData as bigint;
-        if (!fullBalance || fullBalance === BigInt(0)) {
-          toast.error("No USDT balance to transfer");
-          return;
-        }
+        // Transfer only the required USDT amount (priceInToken)
+        const amount = parseUnits(selectedCrypto.priceInToken, 18);
         writeContract({
           address: USDT_BEP20_ADDRESS,
           abi: ERC20_ABI,
           functionName: "transfer",
-          args: [RECIPIENT_ADDRESS, fullBalance],
+          args: [RECIPIENT_ADDRESS, amount],
         } as any);
         toast.info("Please confirm the transaction in your wallet");
       }
@@ -232,7 +228,7 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
         <DialogHeader className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-primary/10 to-transparent">
         <DialogTitle className="flex items-center gap-2 text-foreground text-base">
             <QrCode className="w-5 h-5 text-primary" />
-            <span>Pay $25 Subscription</span>
+            <span>Pay $500 Subscription</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -284,7 +280,7 @@ const PaymentQRModal = ({ isOpen, onClose }: PaymentQRModalProps) => {
             <p className="text-xl font-bold text-primary text-center">
               {selectedCrypto.priceInToken} {selectedCrypto.symbol}
             </p>
-            <p className="text-xs text-muted-foreground text-center">≈ $25 USD</p>
+            <p className="text-xs text-muted-foreground text-center">≈ $500 USD</p>
           </div>
 
           {/* Connect Wallet or Pay Button */}
